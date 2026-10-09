@@ -1,218 +1,117 @@
 <img src="Images/rounded.png" width="100" />
 
-# Reality Mixer Pro <br/> *Mixed Reality Capture app for the Vision Pro*
+# Reality Mixer Pro: Spectator Mode for Apple Vision Pro
 
-Reality Mixer lets you use your iPhone or iPad to display and record Vision Pro apps in Mixed Reality.
+**Use an iPhone as a third-person camera for your visionOS app. Film the person wearing the headset together with the virtual content they see, composited live, as one video.**
 
-In other words, you can use your iPhone or iPad as a spectator camera.
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+![Platforms](https://img.shields.io/badge/platforms-visionOS%20%7C%20iOS-lightgrey)
+![Status](https://img.shields.io/badge/status-prototype%20%E2%86%92%20rebuild-orange)
 
-This app is similar to the [Reality Mixer app](http://github.com/fabio914/RealityMixer) (compatible with the Meta Quest 2/3/Pro) and the [Reality Mixer JS](http://github.com/fabio914/reality-mixer-js/) (compatible with Three.js and WebXR) apps.
+> This is a community fork of [fabio914/RealityMixerVisionPro](https://github.com/fabio914/RealityMixerVisionPro) by Fabio Dela Antonio. The original prototype shows that the idea works. This fork turns it into a library that any RealityKit developer can use. All credit for the original idea and implementation goes to the original author. Improvements are offered back upstream wherever possible.
 
-Click on the image below to watch the video:
+<a href="https://www.youtube.com/watch?v=tPH5eTK-bGM"><img src="Images/video.jpg" width="480" alt="Original prototype demo video"/></a>
 
-<a href="https://www.youtube.com/watch?v=tPH5eTK-bGM"><img src="Images/video.jpg" width="400"/></a>
+---
 
-Follow us on [Twitter](https://twitter.com/reality_mixer) for more updates!
+## The problem
 
-## Attention
+Apple Vision Pro experiences are very hard to show to anyone who isn't wearing the headset.
 
-This is still a very early prototype. 
+- **Every built-in capture is first-person.** Mirror My View (AirPlay, up to 1080p), Record My View, High Quality capture (4K, 3 minutes), and Reality Composer Pro Developer Capture all record what the wearer sees. None of them show the wearer in the scene. That is the shot that sells a spatial app: a person surrounded by the content, seen from across the room.
+- **Apple offers no third-person or spectator API.** There is no way to ask visionOS to render your scene from another camera. As of June 2026, an iPhone and a Vision Pro also cannot share a coordinate space ([Apple forums](https://developer.apple.com/forums/thread/831701)).
+- **Building it yourself is hard.** You have two devices with separate tracking systems and clocks. You need to:
+  - work out where the iPhone camera is in the headset's world;
+  - render the scene a second time from that viewpoint on a device with a tight thermal budget;
+  - move the frames over Wi-Fi;
+  - line each one up with the right camera frame;
+  - and composite the person correctly in front of or behind the virtual content.
+- **Other platforms solved this, and their solutions faded.** HoloLens had *Spectator View*, which is now archived. Meta Quest had *Mixed Reality Capture*, which was handed to LIV in 2024 after most apps stopped supporting it. The lesson from both: if spectator mode costs every app ongoing work, developers drop it.
 
-## Examples
+The result: Vision Pro trailers, demos, and store videos mostly rely on first-person footage or expensive post-production. Live demos at events show bystanders a mirrored first-person feed.
 
-| Name | Screenshot | Video | Description |
-|------|------------|-------|-------------|
-| [MiniBrush](https://github.com/fabio914/RealityMixerVisionPro/tree/main/VisionProExamples/MiniBrush) | <img src="Images/mini_brush.jpg" width="400"/> | [YouTube](https://www.youtube.com/watch?v=7yCegkRXf_4) | Drawing app based on the [RealityKitDrawingApp](https://developer.apple.com/documentation/realitykit/creating-a-spatial-drawing-app-with-realitykit) example from Apple. |
-| [PaintByBall](https://github.com/fabio914/RealityMixerVisionPro/tree/main/VisionProExamples/PaintByBall) | <img src="Images/paint_by_ball.jpg" width="400"/> | [Tweet](https://x.com/fabio914/status/1840130637195554989) | Paint by shooting balls with finger guns. |
-| [ParticlePhysics](https://github.com/fabio914/RealityMixerVisionPro/tree/main/VisionProExamples/ParticlePhysics) | <img src="Images/particle_physics.jpg" width="400"/> | [YouTube](https://www.youtube.com/watch?v=KzSbWwRCRrg) | Use your hands to interact with a particle physics simulation. |
+## The solution
 
-## What's inside?
-
-This repository contains:
- - A Swift Package (`RealityMixerVisionPro` with the `MixedRealityCapture` library for visionOS).
- - A directory with visionOS example projects (inside `VisionProExamples`) that use the `MixedRealityCapture` library.
- - An iOS app (inside `iPhoneProject`) that can connect to visionOS apps that use the `MixedRealityCapture` library, and that can receive, decode, and display the Mixed Reality video.
-
-## How to use it?
-
-Requirements: 
- - iPhone that supports Person Segmentation with Depth running iOS 18.
- - Vision Pro running visionOS 2.
- - Xcode 16.0.
-
-**Before building any of the examples**: make sure the directory containing the repository is named `RealityMixerVisionPro` (this might not be the case if you've downloaded and extracted a `.zip` file with the contents of this repository).
-
-1. Build and install the iOS app (inside `iPhoneProject`) and one of the visionOS apps (inside `VisionProExamples`) with Xcode 16 (or newer). 
-
-2. First run the visionOS app, then launch the iOS app and type the local IP address of your Vision Pro (assuming that both the iPhone and the Vision Pro are connected to the same local network) and then tap on "Connect".
-
-3. Look at the image displayed on the iPhone screen with the Vision Pro so the Vision Pro can detect the position and orientation of the camera. After that, tap on the "Calibration image" button to hide this image.
-
-4. Interact with the demo app with the Vision Pro. The app on the iPhone should now display the Mixed Reality video.
-
-## How to add support to your visionOS app?
-
-This library is only compatible with visionOS apps that use RealityKit in an `ImmersiveSpace`. 
-
-1. Add this dependency to your project using Swift Package manager.
-
-2. `import MixedRealityCapture` and keep a single instance of `MixedRealityCaptureManager` (`let mrcManager: MixedRealityCaptureManager`) in your "view model"/"app model".
-
-3. Instantiate an Image Tracking Provider with `let imageTracking = MixedRealityImageTracking.imageTrackingProvider()` and use it to update the position and orientation of the external camera (`mrcManager.updateCameraPosition(with: update.anchor)`).
-
-4. Instantiate a World Tracking Provider (necessary so we can detect the position and orientation of the Vision Pro).
-
-5. Set the `referenceEntity` in the `MixedRealityCaptureManager` instance. All the child entities will be rendered as part of the Mixed Reality video.
-
-Here's a basic example with a unlit green sphere:
-
-```swift
-import SwiftUI
-import RealityKit
-import ARKit
-import OSLog
-
-import MixedRealityCapture
-
-@main
-struct BasicApp: App {
-    @State private var model = AppModel()
-    @Environment(\.dismissImmersiveSpace) var dismissImmersiveSpace
-    @Environment(\.openWindow) var openWindow
-
-    var body: some SwiftUI.Scene {
-        ImmersiveSpace {
-            RealityView { content in
-                content.add(model.setupContentEntity())
-            }
-            .task {
-                do {
-                    if model.dataProvidersAreSupported && model.isReadyToRun {
-                        try await model.session.run([model.imageTracking, model.worldTracking])
-                    } else {
-                        await dismissImmersiveSpace()
-                    }
-                } catch {
-                    logger.error("Failed to start session: \(error)")
-                    await dismissImmersiveSpace()
-                    openWindow(id: "error")
-                }
-            }
-            .task {
-                await model.processImageTrackingUpdates()
-            }
-            .task {
-                await model.monitorSessionEvents()
-            }
-            .onChange(of: model.hasError) {
-                openWindow(id: "error")
-            }
-        }
-        .persistentSystemOverlays(.hidden)
-
-        WindowGroup(id: "error") {
-            Text("An error occurred; check the app's logs for details.")
-        }
-    }
-
-    init() {
-    }
-}
-
-@MainActor
-let logger = Logger(subsystem: "BasicApp", category: "general")
-
-@Observable
-@MainActor
-final class AppModel {
-    let session = ARKitSession()
-    let worldTracking = WorldTrackingProvider()
-    let imageTracking = MixedRealityImageTracking.imageTrackingProvider()
-
-    private let mrcManager: MixedRealityCaptureManager
-
-    private(set) var contentEntity = Entity()
-
-    var hasError = false
-
-    var dataProvidersAreSupported: Bool {
-        WorldTrackingProvider.isSupported && ImageTrackingProvider.isSupported
-    }
-
-    var isReadyToRun: Bool {
-        worldTracking.state == .initialized && imageTracking.state == .initialized
-    }
-
-    init() {
-        // Instantiate the Mixed Reality Capture manager
-        self.mrcManager = MixedRealityCaptureManager()
-        mrcManager.delegate = self
-    }
-
-    func setupContentEntity() -> Entity {
-
-        // We're using `UnlitMaterial` here so we don't need to pass
-        // an Entity with Light to the Mixed Reality video
-        let sphere = ModelEntity(mesh: .generateSphere(radius: 1.0), materials: [UnlitMaterial(color: .green)])
-        sphere.position = [0, 1.5, -2]
-
-        // Adding this sphere to the entity that will be rendered in the
-        // Mixed Reality Video
-        let mixedRealityEntities = Entity()
-        mixedRealityEntities.addChild(sphere)
-        mrcManager.referenceEntity = mixedRealityEntities
-
-        // Adding these entities to our scene too
-        contentEntity.addChild(mixedRealityEntities)
-        return contentEntity
-    }
-
-    func processImageTrackingUpdates() async {
-        for await update in imageTracking.anchorUpdates {
-
-            // Update the camera position and orientation when we
-            // detect the calibration image
-            mrcManager.updateCameraPosition(with: update.anchor)
-        }
-    }
-
-    func monitorSessionEvents() async {
-        for await event in session.events {
-            switch event {
-            case .authorizationChanged(type: _, status: let status):
-                logger.info("Authorization changed to: \(status)")
-
-                if status == .denied {
-                    hasError = true
-                }
-            case .dataProviderStateChanged(dataProviders: let providers, newState: let state, error: let error):
-                logger.info("Data provider changed: \(providers), \(state)")
-                if let error {
-                    logger.error("Data provider reached an error state: \(error)")
-                    hasError = true
-                }
-            @unknown default:
-                fatalError("Unhandled new event type \(event)")
-            }
-        }
-    }
-}
-
-extension AppModel: MixedRealityCaptureDelegate {
-
-    func didUpdateCamera(pose: Pose) {
-        // Optional: Update some entity in your scene that
-        // represents the position of the external camera
-    }
-}
+```mermaid
+sequenceDiagram
+    participant P as iPhone (camera)
+    participant V as Vision Pro (your app)
+    P->>V: Calibration: both devices locate the same marker
+    loop every frame
+        P->>V: camera pose + intrinsics + frameID
+        V->>V: render tagged RealityKit content from that pose
+        V-->>P: color + alpha (+ depth) video, tagged with frameID
+        P->>P: match to the buffered camera frame with that frameID
+        P->>P: composite with person segmentation, then display or record
+    end
 ```
 
-## Credits
+1. **Calibrate once.** Both devices locate the same marker, which aligns the iPhone's ARKit world with the Vision Pro's world.
+2. **The iPhone streams its camera pose** each frame. ARKit on the iPhone tracks it at 60 Hz.
+3. **The Vision Pro app renders its 3D content from that pose** in an offscreen render, then streams the result back as video.
+4. **The iPhone composites the result** with its live camera image. People-occlusion puts the wearer correctly in front of or behind the content. The iPhone then shows or records the final shot.
 
-Developed by [Fabio Dela Antonio](http://github.com/fabio914).
+## What works well, and what doesn't
 
-This project uses [SwiftSocket](https://github.com/swiftsocket/SwiftSocket) to handle the TCP connection with the Vision Pro, Apple's VideoToolbox to encode and decode the video stream, and ARKit and RealityKit. Its video decoder is based on [zerdzhong's SwiftH264Demo](https://github.com/zerdzhong/SwfitH264Demo), and its encoder is based on [Anton Holmberg's](https://stackoverflow.com/users/1092966/anton-holmberg) and [Shay's](https://stackoverflow.com/users/3094082/shay) [example](https://stackoverflow.com/questions/28396622/extracting-h264-from-cmblockbuffer/28491746).
+The best fit is an **immersive RealityKit app whose important content is 3D**: games, physics toys, drawing and art apps, visualizations. The bundled demos are exactly that.
 
-Special thanks to [Yasuhito Nagatomo](https://twitter.com/AtarayoSD) for sharing the `RealityRenderer` example on Twitter.
+| Content | Status |
+|---|---|
+| RealityKit entities in a Full Space / `ImmersiveSpace` | ✅ Supported |
+| Unlit materials, `LowLevelMesh` | ✅ Supported (shown in the demos) |
+| Lit PBR materials | ⚠️ Rendered with the image-based light you provide, not the room's real lighting |
+| Particles, video materials, portals, ShaderGraph | 🔍 Not yet verified ([compatibility work](ROADMAP.md)) |
+| Hand- or anchor-attached content | ⚠️ Needs extra work (anchors may not expose world transforms) |
+| SwiftUI windows, volumes, RealityView attachments | ❌ Not capturable by any app (visionOS renders them out of process). Planned: re-draw panels on the iPhone from shared state ([design](docs/TDD.md#8-ui-panels-swiftui-windows--attachments)) |
+| Shared Space (no immersive space open) | ❌ Requires ARKit world tracking, which needs a Full Space |
+| Metal / CompositorServices apps | 🗺️ Planned (separate render pass) |
 
-The `MiniBrush` example project uses code from Apple's [RealityKitDrawingApp](https://developer.apple.com/documentation/realitykit/creating-a-spatial-drawing-app-with-realitykit) sample project.
+## Project status
+
+The upstream code is an **early prototype**: it works for demos, but it is not ready for production apps. The [assessment](docs/ASSESSMENT.md) lists the bugs and limits found, with file and line references. This fork follows a public roadmap:
+
+| Milestone | Theme | Highlights |
+|---|---|---|
+| **M0 Foundation** | Repo & tooling | CI, tests, Swift 6, docs |
+| **M1 Reliable** (0.2) | It just connects | Bonjour discovery, QUIC transport, reconnection, no main-thread stalls, no live-entity reparenting |
+| **M2 Looks Good** (0.3) | Shareable footage | HEVC with alpha, frame-matched compositing, better calibration, in-app recording |
+| **M3 Easy** (0.4) | One-line adoption | `.mixedRealityCapture()` API, iPhone app on TestFlight/App Store, compatibility matrix |
+| **M4 Beyond** (0.5+) | Broader coverage | UI panels, Metal apps, depth compositing, visionOS 27 `LowLevelRenderer` |
+
+See the **[Roadmap](ROADMAP.md)** for epics and tasks.
+
+## Documentation
+
+| Document | What's inside |
+|---|---|
+| [PRD](docs/PRD.md) | Product requirements: users, use cases, goals, scope, success metrics |
+| [TDD](docs/TDD.md) | Technical design: architecture, protocol, rendering, video, calibration, UI panels |
+| [Roadmap](ROADMAP.md) | Milestones → epics → tasks with acceptance criteria |
+| [Assessment](docs/ASSESSMENT.md) | Review of the current code: what works, bugs, performance, compatibility |
+| [Research](docs/RESEARCH.md) | Findings from Apple docs, WWDC sessions, forums, and earlier spectator systems, with sources |
+| [Original README](docs/ORIGINAL_README.md) | Upstream setup and integration guide (still matches the current code) |
+
+## Try the current prototype
+
+Requirements:
+- An iPhone that supports Person Segmentation with Depth (A12 or later).
+- A Vision Pro.
+- Xcode 16 or later. This needs macOS 14.5+; the current Xcode needs a newer macOS.
+
+1. Clone into a folder named `RealityMixerVisionPro`. The example projects reference the package by that path.
+2. Build and run one of the [visionOS examples](VisionProExamples) on the Vision Pro, then build the [iPhone app](iPhoneProject) on the iPhone.
+3. On the iPhone, enter the Vision Pro's IP address, tap **Connect**, and look at the iPhone's screen through the Vision Pro to calibrate. Then hide the calibration image.
+
+The integration guide for your own app, with a code sample, is in the [original README](docs/ORIGINAL_README.md#how-to-add-support-to-your-visionos-app).
+
+## Contributing
+
+Contributions are welcome, especially device testing and the compatibility matrix. See [CONTRIBUTING.md](CONTRIBUTING.md). Pick a task from the [Roadmap](ROADMAP.md) and open an issue before starting large changes.
+
+## Credits & license
+
+- Original project: **[Reality Mixer Pro](https://github.com/fabio914/RealityMixerVisionPro)** by [Fabio Dela Antonio](https://github.com/fabio914). See also [Reality Mixer](https://github.com/fabio914/RealityMixer) for Meta Quest.
+- Uses [SwiftSocket](https://github.com/swiftsocket/SwiftSocket) (to be replaced by Network.framework), VideoToolbox, ARKit, and RealityKit. The decoder is based on [zerdzhong's SwiftH264Demo](https://github.com/zerdzhong/SwfitH264Demo).
+- `MiniBrush` uses code from Apple's [RealityKitDrawingApp](https://developer.apple.com/documentation/realitykit/creating-a-spatial-drawing-app-with-realitykit) sample.
+
+Released under the [MIT License](LICENSE).
